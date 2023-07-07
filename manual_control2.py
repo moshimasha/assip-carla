@@ -919,83 +919,13 @@ def game_loop(args):
     pygame.init()
     pygame.font.init()
     world = None
-
-    vehicles_list = []
     #print seconds elapsed from timestamp
 
     try:
         client = carla.Client(args.host, args.port)
         client.set_timeout(20.0)
         sim_world = client.get_world()
-
-        traffic_manager = client.get_trafficmanager()
-        traffic_manager.set_global_distance_to_leading_vehicle(2.5)
-
-        settings = sim_world.get_settings()
-        traffic_manager.set_synchronous_mode(True)
-        
-        if not settings.synchronous_mode:
-            synchronous_master = True
-            settings.synchronous_mode = True
-            settings.fixed_delta_seconds = 0.05
-        else:
-            synchronous_master = False
-
-
-        sim_world.apply_settings(settings)
         """
-        blueprints = get_actor_blueprints(sim_world, 'vehicle.*', 'All')
-      
-    
-        blueprints = [x for x in blueprints if int(x.get_attribute('number_of_wheels')) == 4]
-        blueprints = [x for x in blueprints if not x.id.endswith('microlino')]
-        blueprints = [x for x in blueprints if not x.id.endswith('carlacola')]
-        blueprints = [x for x in blueprints if not x.id.endswith('cybertruck')]
-        blueprints = [x for x in blueprints if not x.id.endswith('t2')]
-        blueprints = [x for x in blueprints if not x.id.endswith('sprinter')]
-        blueprints = [x for x in blueprints if not x.id.endswith('firetruck')]
-        blueprints = [x for x in blueprints if not x.id.endswith('ambulance')]
-
-        blueprints = sorted(blueprints, key=lambda bp: bp.id)
-
-        spawn_points = sim_world.get_map().get_spawn_points()
-
-        
-        # @todo cannot import these directly.
-        SpawnActor = carla.command.SpawnActor
-        SetAutopilot = carla.command.SetAutopilot
-        FutureActor = carla.command.FutureActor
-
-        # --------------
-        # Spawn vehicles
-        # --------------
-        batch = []
-        hero = False
-        for n, transform in enumerate(spawn_points):
-            if n >= 30:
-                break
-            blueprint = random.choice(blueprints)
-            if blueprint.has_attribute('color'):
-                color = random.choice(blueprint.get_attribute('color').recommended_values)
-                blueprint.set_attribute('color', color)
-            if blueprint.has_attribute('driver_id'):
-                driver_id = random.choice(blueprint.get_attribute('driver_id').recommended_values)
-                blueprint.set_attribute('driver_id', driver_id)
-            if hero:
-                blueprint.set_attribute('role_name', 'hero')
-                hero = False
-            else:
-                blueprint.set_attribute('role_name', 'autopilot')
-
-            # spawn the cars and set their autopilot and light state all together
-            batch.append(SpawnActor(blueprint, transform)
-                .then(SetAutopilot(FutureActor, True, traffic_manager.get_port())))
-
-        for response in client.apply_batch_sync(batch, synchronous_master):
-            if response.error:
-                logging.error(response.error)
-            else:
-                vehicles_list.append(response.actor_id)
         """
         display = pygame.display.set_mode(
             (args.width, args.height),
@@ -1084,6 +1014,85 @@ def main():
     print(__doc__)
 
     try:
+        client = carla.Client(args.host, args.port)
+        sim_world = client.get_world()
+
+        traffic_manager = client.get_trafficmanager()
+        traffic_manager.set_global_distance_to_leading_vehicle(2.5)
+
+        settings = sim_world.get_settings()
+        #traffic_manager.set_synchronous_mode(True)
+        
+        if not settings.synchronous_mode:
+            synchronous_master = True
+            #settings.synchronous_mode = True
+            #settings.fixed_delta_seconds = 0.05
+        else:
+            synchronous_master = False
+
+        sim_world.apply_settings(settings)
+        
+        blueprints = get_actor_blueprints(sim_world, 'vehicle.*', 'All')
+      
+    
+        blueprints = [x for x in blueprints if int(x.get_attribute('number_of_wheels')) == 4]
+        blueprints = [x for x in blueprints if not x.id.endswith('microlino')]
+        blueprints = [x for x in blueprints if not x.id.endswith('carlacola')]
+        blueprints = [x for x in blueprints if not x.id.endswith('cybertruck')]
+        blueprints = [x for x in blueprints if not x.id.endswith('t2')]
+        blueprints = [x for x in blueprints if not x.id.endswith('sprinter')]
+        blueprints = [x for x in blueprints if not x.id.endswith('firetruck')]
+        blueprints = [x for x in blueprints if not x.id.endswith('ambulance')]
+
+        blueprints = sorted(blueprints, key=lambda bp: bp.id)
+
+        spawn_points = sim_world.get_map().get_spawn_points()
+        number_of_vehicles = 60
+        number_of_spawn_points = len(spawn_points)
+        if number_of_vehicles < number_of_spawn_points:
+            random.shuffle(spawn_points)
+        elif number_of_vehicles > number_of_spawn_points:
+            msg = 'requested %d vehicles, but could only find %d spawn points'
+            logging.warning(msg, number_of_vehicles, number_of_spawn_points)
+            number_of_vehicles = number_of_spawn_points
+        
+        # @todo cannot import these directly.
+        SpawnActor = carla.command.SpawnActor
+        SetAutopilot = carla.command.SetAutopilot
+        FutureActor = carla.command.FutureActor
+        
+        # --------------
+        # Spawn vehicles
+        # --------------
+        batch = []
+        vehicles_list = []
+        hero = False
+        for n, transform in enumerate(spawn_points):
+            if n >= number_of_vehicles:
+                break
+            blueprint = random.choice(blueprints)
+            if blueprint.has_attribute('color'):
+                color = random.choice(blueprint.get_attribute('color').recommended_values)
+                blueprint.set_attribute('color', color)
+            if blueprint.has_attribute('driver_id'):
+                driver_id = random.choice(blueprint.get_attribute('driver_id').recommended_values)
+                blueprint.set_attribute('driver_id', driver_id)
+            if hero:
+                blueprint.set_attribute('role_name', 'hero')
+                hero = False
+            else:
+                blueprint.set_attribute('role_name', 'autopilot')
+
+            # spawn the cars and set their autopilot and light state all together
+            batch.append(SpawnActor(blueprint, transform)
+                .then(SetAutopilot(FutureActor, True, traffic_manager.get_port())))
+        
+        for response in client.apply_batch_sync(batch, synchronous_master):
+            if response.error:
+                logging.error(response.error)
+            else:
+                vehicles_list.append(response.actor_id)
+
 
         game_loop(args)
 

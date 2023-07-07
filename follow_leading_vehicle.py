@@ -38,6 +38,7 @@ from srunner.scenariomanager.scenarioatomics.atomic_trigger_conditions import (I
 from srunner.scenariomanager.timer import TimeOut
 from srunner.scenarios.basic_scenario import BasicScenario
 from srunner.tools.scenario_helper import get_waypoint_in_distance
+from srunner.tools.scenario_helper import get_location_in_distance
 
 
 class FollowLeadingVehicle(BasicScenario):
@@ -118,7 +119,15 @@ class FollowLeadingVehicle(BasicScenario):
 
         # to avoid the other actor blocking traffic, it was spawed elsewhere
         # reset its pose to the required one
-        start_transform = ActorTransformSetter(self.other_actors[0], self._other_actor_transform)
+        #start_transform = ActorTransformSetter(self.other_actors[0], self._other_actor_transform)
+        start_transform = ActorTransformSetter(self.other_actors[0], self.ego_vehicles[0])
+
+
+        sr_tools.scenario_helper.get_location_in_distance(self._actor,
+                                                                        self._reference_actor,
+                                                                        distance_type=self._distance_type,
+                                                                        freespace=self._freespace,
+                                                                        global_planner=self._global_rp)
 
         # let the other actor drive until next intersection
         # @todo: We should add some feedback mechanism to respond to ego_vehicle behavior
@@ -195,7 +204,6 @@ class FollowLeadingVehicleCustom(BasicScenario):
 
         If randomize is True, the scenario parameters are randomized
         """
-        #TODO: change the start location of the vehicle
         self._map = CarlaDataProvider.get_map()
         self._first_vehicle_location = 25
         self._first_vehicle_speed = 10
@@ -282,7 +290,21 @@ class FollowLeadingVehicleCustom(BasicScenario):
             first_vehicle_waypoint.transform.rotation)
         """
 
-        start_transform = ActorTransformSetter(self.other_actors[0], self._other_actor_transform)
+
+        
+
+        
+
+        """
+        distance = 20
+        new_location, _ = get_location_in_distance(self.ego_vehicles[0], distance)
+        waypoint = CarlaDataProvider.get_map().get_waypoint(new_location)
+        waypoint.transform.location.z += 39
+        self.other_actors[0].set_transform(waypoint.transform)
+        self._other_actor_transform = waypoint.transform
+        """
+
+        start_transform = ActorTransformSetter(self.other_actors[0], carla.Transform(self.ego_vehicles[0].location, self.ego_vehicles[0].rotation))
 
         # let the other actor drive until next intersection
         # @todo: We should add some feedback mechanism to respond to ego_vehicle behavior
@@ -304,7 +326,7 @@ class FollowLeadingVehicleCustom(BasicScenario):
                                                         self.ego_vehicles[0],
                                                         distance=20,
                                                         name="FinalDistance")
-        endcondition_part2 = StandStill(self.ego_vehicles[0], name="StandStill", duration=1)
+        endcondition_part2 = StandStill(self.ego_vehicles[0], name="StandStill", duration=3)
         endcondition.add_child(endcondition_part1)
         endcondition.add_child(endcondition_part2)
 
